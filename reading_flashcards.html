@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reading Flashcards</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 30px;
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .title {
+            color: #4a5568;
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .mode-selection {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .mode-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ffa500);
+            border: none;
+            border-radius: 15px;
+            padding: 20px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .mode-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .mode-btn.advanced {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+        }
+
+        .flashcard-container {
+            display: none;
+        }
+
+        .flashcard-container.active {
+            display: block;
+        }
+
+        .card-wrapper {
+            perspective: 1000px;
+            margin: 30px auto;
+            width: 400px;
+            height: 250px;
+        }
+
+        .flashcard {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        .flashcard.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .card-front {
+            background: linear-gradient(45deg, #ffeaa7, #fab1a0);
+            color: #2d3436;
+        }
+
+        .card-back {
+            background: linear-gradient(45deg, #a8e6cf, #88d8c0);
+            color: #2d3436;
+            transform: rotateY(180deg);
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .card-category {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255,255,255,0.8);
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: normal;
+        }
+
+        .sight-word { border-left: 5px solid #ff6b6b; }
+        .phonics { border-left: 5px solid #4ecdc4; }
+        .rule { border-left: 5px solid #ffa500; }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            background: #667eea;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+
+        .control-btn:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .control-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress {
+            background: #e2e8f0;
+            border-radius: 10px;
+            height: 20px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            height: 100%;
+            transition: width 0.3s;
+            border-radius: 10px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            font-size: 1.1rem;
+            color: #4a5568;
+        }
+
+        .back-btn {
+            background: #718096;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 20px;
+            color: white;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        .explanation {
+            font-size: 1rem;
+            color: #666;
+            margin-top: 10px;
+            line-height: 1.4;
+        }
+
+        @media (max-width: 600px) {
+            .mode-selection {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .card-wrapper {
+                width: 300px;
+                height: 200px;
+            }
+            
+            .card-face {
+                font-size: 1.5rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">📚 Reading Flashcards</h1>
+        
+        <div id="modeSelection" class="mode-selection">
+            <button class="mode-btn" onclick="startMode('beginner')">
+                🌟 K-1st Grade<br>
+                <small>Learning to Read</small>
+            </button>
+            <button class="mode-btn advanced" onclick="startMode('advanced')">
+                🚀 2nd-3rd Grade<br>
+                <small>Building Skills</small>
+            </button>
+        </div>
+
+        <div id="flashcardContainer" class="flashcard-container">
+            <button class="back-btn" onclick="goBack()">← Back to Menu</button>
+            
+            <div class="stats">
+                <div>Card: <span id="currentCard">1</span> of <span id="totalCards">0</span></div>
+                <div>Correct: <span id="correctCount">0</span></div>
+                <div>Mode: <span id="currentMode">K-1st Grade</span></div>
+            </div>
+            
+            <div class="progress">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+
+            <div class="card-wrapper">
+                <div class="flashcard" id="flashcard" onclick="flipCard()">
+                    <div class="card-face card-front" id="cardFront">
+                        <div class="card-category" id="cardCategory">Sight Word</div>
+                        <div id="cardQuestion">Click to start!</div>
+                    </div>
+                    <div class="card-face card-back" id="cardBack">
+                        <div id="cardAnswer">Great job!</div>
+                        <div class="explanation" id="cardExplanation">Keep practicing!</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="control-btn" onclick="previousCard()" id="prevBtn">⬅ Previous</button>
+                <button class="control-btn" onclick="markCorrect()" id="correctBtn">✅ Got it!</button>
+                <button class="control-btn" onclick="markIncorrect()" id="incorrectBtn">🔄 Try Again</button>
+                <button class="control-btn" onclick="nextCard()" id="nextBtn">Next ➡</button>
+                <button class="control-btn" onclick="shuffleCards()" id="shuffleBtn">🔀 Shuffle</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Flashcard data
+        const flashcardData = {
+            beginner: [
+                // Sight Words
+                { type: 'sight-word', category: 'Sight Word', question: 'the', answer: 'the', explanation: 'This is one of the most common words in English!' },
+                { type: 'sight-word', category: 'Sight Word', question: 'and', answer: 'and', explanation: 'We use this word to connect things together.' },
+                { type: 'sight-word', category: 'Sight Word', question: 'you', answer: 'you', explanation: 'This word means the person you are talking to.' },
+                { type: 'sight-word', category: 'Sight Word', question: 'to', answer: 'to', explanation: 'A tiny word that we use all the time!' },
+                { type: 'sight-word', category: 'Sight Word', question: 'said', answer: 'said', explanation: 'This means someone spoke words.' },
+                { type: 'sight-word', category: 'Sight Word', question: 'he', answer: 'he', explanation: 'We use this for boys and men.' },
+                { type: 'sight-word', category: 'Sight Word', question: 'she', answer: 'she', explanation: 'We use this for girls and women.' },
+                { type: 'sight-word', category: 'Sight Word', question: 'was', answer: 'was', explanation: 'This tells us something happened before.' },
+                { type: 'sight-word', category: 'Sight Word', question: 'his', answer: 'his', explanation: 'This means something belongs to a boy or man.' },
+                { type: 'sight-word', category: 'Sight Word', question: 'her', answer: 'her', explanation: 'This means something belongs to a girl or woman.' },
+                
+                // Basic Phonics
+                { type: 'phonics', category: 'Phonics', question: 'cat', answer: 'cat', explanation: 'C-A-T makes the "cat" sound. Short A!' },
+                { type: 'phonics', category: 'Phonics', question: 'dog', answer: 'dog', explanation: 'D-O-G makes the "dog" sound. Short O!' },
+                { type: 'phonics', category: 'Phonics', question: 'sun', answer: 'sun', explanation: 'S-U-N makes the "sun" sound. Short U!' },
+                { type: 'phonics', category: 'Phonics', question: 'hat', answer: 'hat', explanation: 'H-A-T makes the "hat" sound. Same family as cat!' },
+                { type: 'phonics', category: 'Phonics', question: 'big', answer: 'big', explanation: 'B-I-G makes the "big" sound. Short I!' },
+                { type: 'phonics', category: 'Phonics', question: 'run', answer: 'run', explanation: 'R-U-N makes the "run" sound. Same family as sun!' },
+                
+                // Simple Rules
+                { type: 'rule', category: 'Reading Rule', question: 'What happens when we add -s?', answer: 'We make more than one!', explanation: 'Cat becomes cats, dog becomes dogs!' },
+                { type: 'rule', category: 'Reading Rule', question: 'Silent E Rule', answer: 'E makes the vowel say its name!', explanation: 'Like "cake" - the E makes A say "ay"!' },
+                { type: 'rule', category: 'Reading Rule', question: 'What sound does "th" make?', answer: '"th" like in "the"', explanation: 'Put your tongue between your teeth!' },
+                { type: 'rule', category: 'Reading Rule', question: 'What sound does "sh" make?', answer: '"sh" like "quiet!"', explanation: 'Like when we say "shhhh" to be quiet!' }
+            ],
+            
+            advanced: [
+                // Advanced Sight Words
+                { type: 'sight-word', category: 'Sight Word', question: 'because', answer: 'because', explanation: 'This word tells us the reason why something happened.' },
+                { type: 'sight-word', category: 'Sight Word', question: 'through', answer: 'through', explanation: 'This means going from one side to the other.' },
+                { type: 'sight-word', category: 'Sight Word', question: 'thought', answer: 'thought', explanation: 'This means an idea that was in someone\'s mind.' },
+                { type: 'sight-word', category: 'Sight Word', question: 'different', answer: 'different', explanation: 'This means not the same as something else.' },
+                { type: 'sight-word', category: 'Sight Word', question: 'important', answer: 'important', explanation: 'This means something that really matters.' },
+                { type: 'sight-word', category: 'Sight Word', question: 'beautiful', answer: 'beautiful', explanation: 'This means something that looks really nice.' },
+                
+                // Advanced Phonics
+                { type: 'phonics', category: 'Phonics', question: 'night', answer: 'night', explanation: 'The "igh" makes a long I sound, like in "light" and "right".' },
+                { type: 'phonics', category: 'Phonics', question: 'chair', answer: 'chair', explanation: 'The "ai" makes a long A sound, and "ch" makes the "ch" sound.' },
+                { type: 'phonics', category: 'Phonics', question: 'phone', answer: 'phone', explanation: 'The "ph" makes an "f" sound, and silent E makes O long.' },
+                { type: 'phonics', category: 'Phonics', question: 'school', answer: 'school', explanation: 'The "ch" here makes a "k" sound, and "oo" makes "oo".' },
+                { type: 'phonics', category: 'Phonics', question: 'caught', answer: 'caught', explanation: 'The "aught" makes an "awt" sound, like in "taught".' },
+                
+                // Advanced Rules
+                { type: 'rule', category: 'Reading Rule', question: 'When do we use "ck"?', answer: 'After short vowels!', explanation: 'Like "back", "sick", "duck" - but "k" after long vowels like "bike".' },
+                { type: 'rule', category: 'Reading Rule', question: 'How do we make words plural?', answer: 'Usually add -s, but -es after s, x, z, ch, sh', explanation: 'Cat→cats, but box→boxes, dish→dishes!' },
+                { type: 'rule', category: 'Reading Rule', question: 'What is a contraction?', answer: 'Two words squeezed into one!', explanation: 'Like "can\'t" = "can not" or "I\'m" = "I am".' },
+                { type: 'rule', category: 'Reading Rule', question: 'What are compound words?', answer: 'Two words stuck together!', explanation: 'Like "rainbow" = "rain" + "bow" or "homework" = "home" + "work".' },
+                { type: 'rule', category: 'Reading Rule', question: 'When is C soft?', answer: 'Before E, I, or Y!', explanation: 'Like "city", "ice", "cycle" - otherwise it\'s hard like "cat".' }
+            ]
+        };
+
+        // Game state
+        let currentMode = 'beginner';
+        let currentCardIndex = 0;
+        let currentDeck = [];
+        let correctAnswers = 0;
+        let isFlipped = false;
+
+        function startMode(mode) {
+            currentMode = mode;
+            currentDeck = [...flashcardData[mode]];
+            currentCardIndex = 0;
+            correctAnswers = 0;
+            isFlipped = false;
+            
+            document.getElementById('modeSelection').style.display = 'none';
+            document.getElementById('flashcardContainer').classList.add('active');
+            document.getElementById('currentMode').textContent = mode === 'beginner' ? 'K-1st Grade' : '2nd-3rd Grade';
+            
+            updateCard();
+            updateStats();
+        }
+
+        function goBack() {
+            document.getElementById('modeSelection').style.display = 'flex';
+            document.getElementById('flashcardContainer').classList.remove('active');
+            resetCard();
+        }
+
+        function updateCard() {
+            if (currentCardIndex >= currentDeck.length) {
+                currentCardIndex = 0;
+            }
+            
+            const card = currentDeck[currentCardIndex];
+            const flashcard = document.getElementById('flashcard');
+            
+            // Reset flip
+            flashcard.classList.remove('flipped');
+            isFlipped = false;
+            
+            // Update content
+            document.getElementById('cardCategory').textContent = card.category;
+            document.getElementById('cardCategory').className = `card-category ${card.type}`;
+            document.getElementById('cardQuestion').textContent = card.question;
+            document.getElementById('cardAnswer').textContent = card.answer;
+            document.getElementById('cardExplanation').textContent = card.explanation;
+            
+            updateStats();
+        }
+
+        function updateStats() {
+            document.getElementById('currentCard').textContent = currentCardIndex + 1;
+            document.getElementById('totalCards').textContent = currentDeck.length;
+            document.getElementById('correctCount').textContent = correctAnswers;
+            
+            const progress = ((currentCardIndex + 1) / currentDeck.length) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+            
+            // Update button states
+            document.getElementById('prevBtn').disabled = currentCardIndex === 0;
+            document.getElementById('nextBtn').disabled = currentCardIndex === currentDeck.length - 1;
+        }
+
+        function flipCard() {
+            const flashcard = document.getElementById('flashcard');
+            flashcard.classList.toggle('flipped');
+            isFlipped = !isFlipped;
+        }
+
+        function resetCard() {
+            const flashcard = document.getElementById('flashcard');
+            flashcard.classList.remove('flipped');
+            isFlipped = false;
+        }
+
+        function nextCard() {
+            if (currentCardIndex < currentDeck.length - 1) {
+                currentCardIndex++;
+                updateCard();
+            }
+        }
+
+        function previousCard() {
+            if (currentCardIndex > 0) {
+                currentCardIndex--;
+                updateCard();
+            }
+        }
+
+        function markCorrect() {
+            correctAnswers++;
+            if (!isFlipped) {
+                flipCard();
+            }
+            setTimeout(() => {
+                if (currentCardIndex < currentDeck.length - 1) {
+                    nextCard();
+                }
+            }, 1000);
+        }
+
+        function markIncorrect() {
+            if (!isFlipped) {
+                flipCard();
+            }
+        }
+
+        function shuffleCards() {
+            for (let i = currentDeck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [currentDeck[i], currentDeck[j]] = [currentDeck[j], currentDeck[i]];
+            }
+            currentCardIndex = 0;
+            updateCard();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStats();
+        });
+    </script>
+</body>
+</html>
